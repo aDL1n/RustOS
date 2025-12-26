@@ -147,7 +147,11 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+
+    interrupts::without_interrupts(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    });
 }
 
 #[macro_export]
@@ -175,12 +179,20 @@ pub fn _eprint(args: fmt::Arguments) {
 // Tests
 #[test_case]
 fn test_println_output() {
+    use core::fmt::Write;
+    use x86_64::instructions::interrupts;
+
     let s = "Some test string that fits on a single line";
-    println!("{}", s);
-    for (i, c) in s.chars().enumerate() {
-        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
-        assert_eq!(char::from(screen_char.ascii_character), c);
-    }
+    interrupts::without_interrupts(|| {
+        let mut writer = WRITER.lock();
+        writeln!(writer, "\n{}", s).expect("Printing to VGA failed");
+
+        for (i, c) in s.chars().enumerate() {
+            let screen_char = writer.buffer.chars[BUFFER_HEIGHT - 2][i].read();
+            assert_eq!(char::from(screen_char.ascii_character), c);
+        }
+    });
+
 }
 
 #[test_case]
@@ -192,18 +204,28 @@ fn test_println_many() {
 
 #[test_case]
 fn test_eprintln_output() {
+    use x86_64::instructions::interrupts;
+
     let s = "Some test string that fits on a single line";
-    eprintln!("{}", s);
-    for (i, c) in s.chars().enumerate() {
-        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
-        assert_eq!(char::from(screen_char.ascii_character), c);
-    }
+    interrupts::without_interrupts(|| {
+        eprintln!("\n{}", s);
+        let writer = WRITER.lock();
+
+        for (i, c) in s.chars().enumerate() {
+            let screen_char = writer.buffer.chars[BUFFER_HEIGHT - 2][i].read();
+            assert_eq!(char::from(screen_char.ascii_character), c);
+        }
+    });
 }
 
 #[test_case]
 fn test_eprintln_many() {
+    use x86_64::instructions::interrupts;
+
     for _ in 0..200 {
-        eprintln!("test_eprintln_many output");
+        interrupts::without_interrupts(|| {
+            eprintln!("test_eprintln_many output");
+        });
     }
 }
 
