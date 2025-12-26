@@ -1,0 +1,1 @@
+Here you can find the source code for my operating system, written in Rust, based on the article "Writing an OS in Rust," as my first project in this language (not the best approach, but it's more interesting). If you're interested in implementing this version or would like to contribute, please create an issue.

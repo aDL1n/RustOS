@@ -1,0 +1,5 @@
+cargo build --config D:\RustProjects\RustOS\.cargo\config.toml
+cargo bootimage --config D:\RustProjects\RustOS\.cargo\config.toml
+qemu-system-x86_64.exe -drive format=raw,file=target/rustos-target-x86-64/debug/bootimage-rust_os.bin
+
+cargo bootimage --config D:\RustProjects\RustOS\.cargo\config.toml && qemu-system-x86_64.exe -drive format=raw,file=target/rustos-target-x86-64/debug/bootimage-rust_os.bin
