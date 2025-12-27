@@ -1,8 +1,7 @@
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-use crate::{eprintln, gdt, print, println};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
+use crate::{eprintln, gdt, hlt_loop, print};
 use lazy_static::lazy_static;
 use pc_keyboard::DecodedKey;
-use pc_keyboard::KeyCode::K;
 use pic8259::ChainedPics;
 use spin;
 
@@ -23,24 +22,22 @@ impl InterruptIndex {
     fn as_u8(self) -> u8 {
         self as u8
     }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
+
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
-            idt[InterruptIndex::Timer.as_usize()]
+            idt[InterruptIndex::Timer.as_u8()]
                 .set_handler_fn(timer_interrupt_handler);
-            idt[InterruptIndex::Keyboard.as_usize()]
+            idt[InterruptIndex::Keyboard.as_u8()]
                 .set_handler_fn(keyboard_interrupt_handler);
         }
+        idt.page_fault.set_handler_fn(page_fault_handler);
 
         idt
     };
@@ -106,6 +103,19 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
+}
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: PageFaultErrorCode,
+) {
+    use x86_64::registers::control::Cr2;
+
+    eprintln!("Exception: Page Fault!");
+    eprintln!("Accessed Address: {:?}", Cr2::read());
+    eprintln!("Error Code: {:?}", error_code);
+    eprintln!("{:#?}", stack_frame);
+    hlt_loop();
 }
 
 #[test_case]
