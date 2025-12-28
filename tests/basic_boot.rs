@@ -5,12 +5,14 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use rust_os::println;
+use bootloader::{entry_point, BootInfo};
+use rust_os::{hlt_loop, println};
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+entry_point!(main);
+
+fn main(boot_info: &'static BootInfo) -> ! {
     test_main();
-    loop {}
+    hlt_loop()
 }
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

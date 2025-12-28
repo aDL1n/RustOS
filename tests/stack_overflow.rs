@@ -3,12 +3,14 @@
 #![no_main]
 
 use core::panic::PanicInfo;
-use rust_os::{ serial_print, serial_println, exit_qemu, QemuExitCode };
+use bootloader::{entry_point, BootInfo};
+use rust_os::{serial_print, serial_println, exit_qemu, QemuExitCode };
 use lazy_static::lazy_static;
 use x86_64::structures::idt::{ InterruptDescriptorTable, InterruptStackFrame };
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+entry_point!(main);
+
+fn main(_boot_info: &'static BootInfo) -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 
     rust_os::init();
