@@ -6,7 +6,7 @@
 
 extern crate alloc;
 
-use alloc::{ boxed::Box, vec, vec::Vec, rc::Rc };
+use alloc::{ boxed::Box, vec::Vec, rc::Rc };
 use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
 use x86_64::VirtAddr;
@@ -17,7 +17,6 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use rust_os::memory::{self, BootInfoFrameAllocator };
     use rust_os::allocator;
-
 
     println!("Hello World{}", "!");
 

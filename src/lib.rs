@@ -8,7 +8,7 @@
 extern crate alloc;
 
 use core::panic::PanicInfo;
-use bootloader::{entry_point, BootInfo};
+use bootloader::{ entry_point, BootInfo };
 
 pub mod serial;
 pub mod vga_buffer;
