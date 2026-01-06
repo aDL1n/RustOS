@@ -1,6 +1,5 @@
-use alloc::vec::Vec;
-use core::alloc::{GlobalAlloc, Layout};
-use core::{mem, ptr, ptr::NonNull};
+use core::alloc::{ GlobalAlloc, Layout };
+use core::{ mem, ptr, ptr::NonNull };
 use crate::allocator::Locked;
 
 struct ListNode {

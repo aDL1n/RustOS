@@ -8,9 +8,9 @@ extern crate alloc;
 
 use alloc::{ boxed::Box, vec::Vec, rc::Rc };
 use core::panic::PanicInfo;
-use bootloader::{entry_point, BootInfo};
+use bootloader::{ entry_point, BootInfo };
 use x86_64::VirtAddr;
-use rust_os::{eprintln, hlt_loop, memory, println};
+use rust_os::{ eprintln, hlt_loop, memory, println };
 
 entry_point!(kernel_main);
 

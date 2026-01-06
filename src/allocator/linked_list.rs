@@ -1,6 +1,6 @@
-use super::{align_up, Locked};
-use core::alloc::{GlobalAlloc, Layout};
-use core::{mem, ptr};
+use super::{ align_up, Locked };
+use core::alloc::{ GlobalAlloc, Layout };
+use core::{ mem, ptr };
 
 struct ListNode {
     size: u64,
@@ -33,22 +33,51 @@ impl LinkedListAllocator {
     }
     
     pub unsafe fn init(&mut self, heap_start: u64, heap_size: u64) {
-        unsafe {
-            self.add_free_region(heap_start, heap_size);
-        }
+        self.add_free_region(heap_start, heap_size);
     }
 
     fn add_free_region(&mut self, addr: u64, size: u64) {
         assert_eq!(align_up(addr, mem::align_of::<ListNode>() as u64), addr);
         assert!(size >= mem::size_of::<ListNode>() as u64);
 
-        let mut node = ListNode::new(size);
-        node.next = self.head.next.take();
+        let mut current = &mut self.head;
+        while current.next.as_ref()
+            .map_or(false, |n| n.start_address() < addr)
+        {
+            current = current.next.as_mut().unwrap();
+        }
 
-        let node_ptr = addr as *mut ListNode;
-        unsafe {
-            node_ptr.write(node);
-            self.head.next = Some(&mut *node_ptr);
+        if current.size > 0 {
+            assert!(current.end_address() <= addr, "Memory corruption: overlapping free block!");
+        }
+
+        let mut next = current.next.take();
+        let mut new_size = size;
+
+        if let Some(ref mut node) = next {
+            assert!(
+                addr + size <= node.start_address(),
+                "Memory corruption: overlapping free block!");
+
+            if addr + size == node.start_address() {
+                new_size += node.size;
+                next = node.next.take();
+            }
+        }
+
+        if current.size > 0 && current.end_address() == addr {
+            current.size += new_size;
+            current.next = next;
+        } else {
+            let node_ptr = addr as *mut ListNode;
+
+            unsafe {
+                node_ptr.write(ListNode {
+                    size: new_size,
+                    next
+                });
+                current.next = Some(&mut *node_ptr);
+            }
         }
     }
 
@@ -106,11 +135,11 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
         if let Some((region, alloc_start)) = allocator.find_region(size, align) {
             let alloc_end = alloc_start.checked_add(size).ok_or(()).expect("overflow");
             let excess_size = region.end_address() - alloc_end;
+
             if excess_size > 0 {
-                unsafe {
-                    allocator.add_free_region(alloc_end, excess_size);
-                }
+                allocator.add_free_region(alloc_end, excess_size);
             }
+
             alloc_start as *mut u8
         } else {
             ptr::null_mut()
@@ -120,8 +149,6 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         let (size, _) = LinkedListAllocator::size_align(layout);
 
-        unsafe {
-            self.lock().add_free_region(ptr as u64, size);
-        }
+        self.lock().add_free_region(ptr as u64, size);
     }
 }
