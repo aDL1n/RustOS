@@ -2,15 +2,14 @@ mod bump;
 mod linked_list;
 mod fixed_size_block;
 
-use alloc::alloc::{ GlobalAlloc };
+use crate::allocator::linked_list::LinkedListAllocator;
+use alloc::alloc::GlobalAlloc;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
     },
     VirtAddr,
 };
-use crate::allocator::fixed_size_block::FixedSizeBlockAllocator;
-use crate::allocator::linked_list::LinkedListAllocator;
 
 pub const HEAP_START: u64 = 0x_4444_4444_0000;
 pub const HEAP_SIZE: u64 = 100 * 1024;

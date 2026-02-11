@@ -7,8 +7,8 @@
 
 extern crate alloc;
 
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use bootloader::{ entry_point, BootInfo };
 
 pub mod serial;
 pub mod vga_buffer;
@@ -16,6 +16,7 @@ pub mod interrupts;
 pub mod gdt;
 pub mod memory;
 pub mod allocator;
+pub mod task;
 
 pub trait Testable {
     fn run(&self) -> ();
