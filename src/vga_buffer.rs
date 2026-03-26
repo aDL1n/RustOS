@@ -39,7 +39,7 @@ impl ColorCode {
 #[repr(C)]
 struct ScreenChar {
     ascii_character: u8,
-    color_code: ColorCode
+    color_code: ColorCode,
 }
 
 const BUFFER_HEIGHT: usize = 25;
@@ -71,12 +71,21 @@ impl Writer {
     fn clear_row(&mut self, row: usize) {
         let blank = ScreenChar {
             ascii_character: b' ',
-            color_code: self.color_code
+            color_code: self.color_code,
         };
 
         for col in 0..BUFFER_WIDTH {
             self.buffer.chars[row][col].write(blank);
         }
+    }
+
+    pub fn write_with_color(&mut self, args: fmt::Arguments, color: ColorCode) {
+        let prev_color = self.color_code;
+        self.color_code = color;
+
+        use core::fmt::Write;
+        self.write_fmt(args).unwrap();
+        self.color_code = prev_color;
     }
 
     pub fn write_byte(&mut self, byte: u8) {
@@ -167,13 +176,14 @@ macro_rules! eprintln {
 
 #[doc(hidden)]
 pub fn _eprint(args: fmt::Arguments) {
-    use core::fmt::Write;
-    let mut writer = WRITER.lock();
+    use x86_64::instructions::interrupts;
 
-    let prev_color = writer.get_color();
-    writer.set_color(ColorCode::new(Color::LightRed, Color::Black));
-    writer.write_fmt(args).unwrap();
-    writer.set_color(prev_color);
+    interrupts::without_interrupts(|| {
+        let mut writer = WRITER.lock();
+        let error_color = ColorCode::new(Color::White, Color::Red);
+
+        writer.write_with_color(args, error_color);
+    });
 }
 
 // Tests
@@ -192,7 +202,6 @@ fn test_println_output() {
             assert_eq!(char::from(screen_char.ascii_character), c);
         }
     });
-
 }
 
 #[test_case]
@@ -228,4 +237,3 @@ fn test_eprintln_many() {
         });
     }
 }
-

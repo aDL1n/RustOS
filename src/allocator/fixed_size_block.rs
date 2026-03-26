@@ -6,7 +6,7 @@ struct ListNode {
     next: Option<&'static mut ListNode>,
 }
 
-const BLOCK_SIZES: &[u64] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+const BLOCK_SIZES: &[u64] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
 
 pub struct FixedSizeBlockAllocator {
     list_heads: [Option<&'static mut ListNode>; BLOCK_SIZES.len()],
