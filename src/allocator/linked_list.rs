@@ -1,4 +1,4 @@
-use super::{align_up, Locked};
+use super::{Locked, align_up};
 use core::alloc::{GlobalAlloc, Layout};
 use core::{mem, ptr};
 
@@ -11,11 +11,11 @@ impl ListNode {
     const fn new(size: u64) -> ListNode {
         ListNode { size, next: None }
     }
-    
+
     fn start_address(&self) -> u64 {
         self as *const Self as u64
     }
-    
+
     fn end_address(&self) -> u64 {
         self.start_address() + self.size
     }
@@ -31,7 +31,7 @@ impl LinkedListAllocator {
             head: ListNode::new(0),
         }
     }
-    
+
     pub unsafe fn init(&mut self, heap_start: u64, heap_size: u64) {
         self.add_free_region(heap_start, heap_size);
     }
@@ -41,14 +41,19 @@ impl LinkedListAllocator {
         assert!(size >= mem::size_of::<ListNode>() as u64);
 
         let mut current = &mut self.head;
-        while current.next.as_ref()
+        while current
+            .next
+            .as_ref()
             .map_or(false, |n| n.start_address() < addr)
         {
             current = current.next.as_mut().unwrap();
         }
 
         if current.size > 0 {
-            assert!(current.end_address() <= addr, "Memory corruption: overlapping free block!");
+            assert!(
+                current.end_address() <= addr,
+                "Memory corruption: overlapping free block!"
+            );
         }
 
         let mut next = current.next.take();
@@ -57,7 +62,8 @@ impl LinkedListAllocator {
         if let Some(ref mut node) = next {
             assert!(
                 addr + size <= node.start_address(),
-                "Memory corruption: overlapping free block!");
+                "Memory corruption: overlapping free block!"
+            );
 
             if addr + size == node.start_address() {
                 new_size += node.size;
@@ -74,7 +80,7 @@ impl LinkedListAllocator {
             unsafe {
                 node_ptr.write(ListNode {
                     size: new_size,
-                    next
+                    next,
                 });
                 current.next = Some(&mut *node_ptr);
             }

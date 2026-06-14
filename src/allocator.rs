@@ -1,14 +1,14 @@
 mod bump;
-mod linked_list;
 mod fixed_size_block;
+mod linked_list;
 
 use crate::allocator::linked_list::LinkedListAllocator;
 use alloc::alloc::GlobalAlloc;
 use x86_64::{
-    structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
-    },
     VirtAddr,
+    structures::paging::{
+        FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB, mapper::MapToError,
+    },
 };
 
 pub const HEAP_START: u64 = 0x_4444_4444_0000;
@@ -35,11 +35,9 @@ pub fn init_heap(
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-        unsafe {
-            mapper.map_to(page, frame, flags, frame_allocator)?.flush()
-        };
+        unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
     }
-    
+
     unsafe {
         ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }

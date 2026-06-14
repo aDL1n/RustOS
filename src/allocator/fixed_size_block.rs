@@ -24,7 +24,8 @@ impl FixedSizeBlockAllocator {
 
     pub unsafe fn init(&mut self, heap_start: u64, heap_size: u64) {
         unsafe {
-            self.fallback_allocator.init(heap_start as usize, heap_size as usize);
+            self.fallback_allocator
+                .init(heap_start as usize, heap_size as usize);
         }
     }
 
@@ -47,24 +48,21 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
         let mut allocator = self.lock();
 
         match list_index(&layout) {
-            Some(index) => {
-                match allocator.list_heads[index].take() {
-                    Some(node) => {
-                        allocator.list_heads[index] = node.next.take();
-                        node as *mut ListNode as *mut u8
-                    }
-                    None => {
-                        let block_size = BLOCK_SIZES[index];
-                        let block_align = block_size;
-                        let layout = Layout::from_size_align(block_size as usize, block_align as usize).unwrap();
-
-                        allocator.fallback_alloc(layout)
-                    }
+            Some(index) => match allocator.list_heads[index].take() {
+                Some(node) => {
+                    allocator.list_heads[index] = node.next.take();
+                    node as *mut ListNode as *mut u8
                 }
-            }
-            None => {
-                allocator.fallback_alloc(layout)
-            }
+                None => {
+                    let block_size = BLOCK_SIZES[index];
+                    let block_align = block_size;
+                    let layout =
+                        Layout::from_size_align(block_size as usize, block_align as usize).unwrap();
+
+                    allocator.fallback_alloc(layout)
+                }
+            },
+            None => allocator.fallback_alloc(layout),
         }
     }
 
@@ -73,7 +71,9 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
 
         match list_index(&layout) {
             Some(index) => {
-                let new_node = ListNode { next: allocator.list_heads[index].take() };
+                let new_node = ListNode {
+                    next: allocator.list_heads[index].take(),
+                };
 
                 assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index] as usize);
                 assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index] as usize);

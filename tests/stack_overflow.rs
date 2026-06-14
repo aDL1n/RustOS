@@ -2,11 +2,11 @@
 #![no_std]
 #![no_main]
 
+use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
-use bootloader::{entry_point, BootInfo};
-use rust_os::{serial_print, serial_println, exit_qemu, QemuExitCode };
 use lazy_static::lazy_static;
-use x86_64::structures::idt::{ InterruptDescriptorTable, InterruptStackFrame };
+use rust_os::{QemuExitCode, exit_qemu, serial_print, serial_println};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 entry_point!(main);
 

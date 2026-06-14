@@ -4,6 +4,7 @@ build-std = ["core", "compiler_builtins", "alloc"]
 
 [build]
 target = "rustos-target-x86-64.json"
+rustflags = ["-Z", "json-target-spec"]
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
