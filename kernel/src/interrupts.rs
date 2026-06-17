@@ -1,4 +1,4 @@
-use crate::{eprintln, gdt, hlt_loop};
+use crate::{eprintln, gdt, hlt_loop, print};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
@@ -57,6 +57,8 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    print!(".");
+
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
@@ -66,7 +68,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use x86_64::instructions::port::Port;
 
-    let mut port = Port::new(0x60);
+    let mut port = Port::new(0x64);
     let scancode: u8 = unsafe { port.read() };
     crate::task::keyboard::add_scancode(scancode);
 
@@ -87,9 +89,4 @@ extern "x86-interrupt" fn page_fault_handler(
     eprintln!("Error Code: {:?}", error_code);
     eprintln!("{:#?}", stack_frame);
     hlt_loop();
-}
-
-#[test_case]
-fn test_breakpoint_exception() {
-    x86_64::instructions::interrupts::int3();
 }
