@@ -8,8 +8,9 @@
 
 extern crate alloc;
 
-use bootloader::{BootInfo, entry_point};
+use bootloader_api::{BootInfo, entry_point, BootloaderConfig};
 use core::panic::PanicInfo;
+use bootloader_api::config::Mapping;
 
 pub mod allocator;
 pub mod gdt;
@@ -17,7 +18,7 @@ pub mod interrupts;
 pub mod memory;
 pub mod serial;
 pub mod task;
-pub mod vga_buffer;
+pub mod framebuffer;
 pub mod acpi;
 
 pub trait Testable {
@@ -50,11 +51,18 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     hlt_loop()
 }
 
-#[cfg(test)]
-entry_point!(test_kernel_main);
+
+pub static BOOTLOADER_CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
+    config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config
+};
 
 #[cfg(test)]
-fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
+entry_point!(test_kernel_main, config = &BOOTLOADER_CONFIG);
+
+#[cfg(test)]
+fn test_kernel_main(_boot_info: &'static mut BootInfo) -> ! {
     init();
 
     test_main();

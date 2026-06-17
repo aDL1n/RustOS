@@ -1,83 +1,69 @@
-#![no_std]
-#![no_main]
-#![feature(custom_test_frameworks)]
-#![test_runner(rust_os::test_runner)]
-#![reexport_test_harness_main = "test_main"]
+use ovmf_prebuilt::{Arch, FileType, Prebuilt, Source};
+use std::env;
+use std::process::{Command, exit};
 
-extern crate alloc;
+fn main() {
+    // read env variables that were set in build script
+    let uefi_path = env!("UEFI_PATH");
+    let bios_path = env!("BIOS_PATH");
 
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
-use bootloader::{BootInfo, entry_point};
-use core::panic::PanicInfo;
-use rust_os::task::Task;
-use rust_os::task::executor::Executor;
-use rust_os::task::keyboard;
-use rust_os::println;
-use x86_64::VirtAddr;
+    // parse mode from CLI
+    let args: Vec<String> = env::args().collect();
+    let prog = &args[0];
 
-entry_point!(kernel_main);
+    // choose whether to start the UEFI or BIOS image
+    let uefi = match args.get(1).map(|s| s.to_lowercase()) {
+        Some(ref s) if s == "uefi" => true,
+        Some(ref s) if s == "bios" => false,
+        Some(ref s) if s == "-h" || s == "--help" => {
+            println!("Usage: {prog} [uefi|bios]");
+            println!("  uefi  - boot using OVMF (UEFI)");
+            println!("  bios  - boot using legacy BIOS");
+            exit(0);
+        }
+        _ => {
+            eprintln!("Usage: {prog} [uefi|bios]");
+            exit(1);
+        }
+    };
 
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    use rust_os::allocator;
-    use rust_os::memory::{self, BootInfoFrameAllocator};
-    rust_os::init();
+    let mut cmd = Command::new("qemu-system-x86_64");
+    // print serial output to the shell
+    cmd.arg("-serial").arg("mon:stdio");
+    // don't display video output
+    // cmd.arg("-display").arg("none");
+    // enable the guest to exit qemu
+    cmd.arg("-device")
+        .arg("isa-debug-exit,iobase=0xf4,iosize=0x04");
 
-    println!("Hello World{}", "!");
+    if uefi {
+        let prebuilt =
+            Prebuilt::fetch(Source::LATEST, "target/ovmf").expect("failed to update prebuilt");
 
-    unsafe {
-        // rust_os::acpi::init(boot_info.physical_memory_offset, boot_info.physical_memory_offset as usize);
+        let code = prebuilt.get_file(Arch::X64, FileType::Code);
+        let vars = prebuilt.get_file(Arch::X64, FileType::Vars);
+
+        cmd.arg("-drive")
+            .arg(format!("format=raw,file={uefi_path}"));
+        cmd.arg("-drive").arg(format!(
+            "if=pflash,format=raw,unit=0,file={},readonly=on",
+            code.display()
+        ));
+        // copy vars and enable rw instead of snapshot if you want to store data (e.g. enroll secure boot keys)
+        cmd.arg("-drive").arg(format!(
+            "if=pflash,format=raw,unit=1,file={},snapshot=on",
+            vars.display()
+        ));
+    } else {
+        cmd.arg("-drive")
+            .arg(format!("format=raw,file={bios_path}"));
     }
-    
-    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut mapper = unsafe { memory::init(physical_memory_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
-
-    let heap_value = Box::new(42);
-    println!("heap value: {:p}", heap_value);
-
-    let mut vec = Vec::new();
-    for i in 0..500 {
-        vec.push(i);
-    }
-    println!("vec at: {:p}", vec.as_slice());
-
-    let reference_counted = Rc::new(vec);
-    let cloned_reference = reference_counted.clone();
-    println!("reference counted: {:p}", reference_counted);
-    core::mem::drop(reference_counted);
-    println!("cloned reference: {:p}", cloned_reference);
-
-    #[cfg(test)]
-    test_main();
-
-    let mut executor = Executor::new();
-    executor.spawn(Task::new(example_task()));
-    executor.spawn(Task::new(keyboard::print_keypresses()));
-    executor.run();
-}
-
-async fn async_number() -> u32 {
-    67
-}
-
-async fn example_task() {
-    let number = async_number().await;
-    println!("async number: {}", number);
-}
-
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    use rust_os::{eprintln, hlt_loop};
-    
-    eprintln!("{}", info);
-    hlt_loop();
-}
-
-#[cfg(test)]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    rust_os::test_panic_handler(info)
+    let mut child = cmd.spawn().expect("failed to start qemu-system-x86_64");
+    let status = child.wait().expect("failed to wait on qemu");
+    match status.code().unwrap_or(1) {
+        0x10 => 0, // success
+        0x11 => 1, // failure
+        _ => 2,    // unknown fault
+    };
 }

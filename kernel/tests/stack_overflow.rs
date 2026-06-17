@@ -2,18 +2,18 @@
 #![no_std]
 #![no_main]
 
-use bootloader::{BootInfo, entry_point};
+use bootloader_api::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 use lazy_static::lazy_static;
-use rust_os::{QemuExitCode, exit_qemu, serial_print, serial_println};
+use kernel::{QemuExitCode, exit_qemu, serial_print, serial_println};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 entry_point!(main);
 
-fn main(_boot_info: &'static BootInfo) -> ! {
+fn main(_boot_info: &mut BootInfo) -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 
-    rust_os::init();
+    kernel::init();
     init_test_idt();
 
     stack_overflow();
@@ -23,7 +23,7 @@ fn main(_boot_info: &'static BootInfo) -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    rust_os::test_panic_handler(info)
+    kernel::test_panic_handler(info)
 }
 
 #[allow(unconditional_recursion)]
@@ -38,7 +38,7 @@ lazy_static! {
         unsafe {
             idt.double_fault
                 .set_handler_fn(test_double_fault_handler)
-                .set_stack_index(rust_os::gdt::DOUBLE_FAULT_IST_INDEX);
+                .set_stack_index(kernel::gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
         idt

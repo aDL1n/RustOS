@@ -1,29 +1,36 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(rust_os::test_runner)]
+#![test_runner(kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use bootloader::{BootInfo, entry_point};
+use bootloader_api::{BootInfo, entry_point, BootloaderConfig};
 use core::panic::PanicInfo;
-use rust_os::allocator::HEAP_SIZE;
-use rust_os::hlt_loop;
+use bootloader_api::config::Mapping;
+use kernel::allocator::HEAP_SIZE;
+use kernel::hlt_loop;
 
-entry_point!(main);
+pub static BOOTLOADER_CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
+    config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config
+};
 
-fn main(boot_info: &'static BootInfo) -> ! {
-    use rust_os::allocator;
-    use rust_os::memory::{self, BootInfoFrameAllocator};
+entry_point!(main, config = &BOOTLOADER_CONFIG);
+
+fn main(boot_info: &'static mut BootInfo) -> ! {
+    use kernel::allocator;
+    use kernel::memory::{self, BootInfoFrameAllocator};
     use x86_64::VirtAddr;
 
-    rust_os::init();
-    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    kernel::init();
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     test_main();
@@ -32,7 +39,7 @@ fn main(boot_info: &'static BootInfo) -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    rust_os::test_panic_handler(info)
+    kernel::test_panic_handler(info)
 }
 
 #[test_case]

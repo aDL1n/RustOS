@@ -1,13 +1,13 @@
 #![no_std]
 #![no_main]
 
-use bootloader::{BootInfo, entry_point};
+use bootloader_api::{BootInfo, entry_point};
 use core::panic::PanicInfo;
-use rust_os::{QemuExitCode, exit_qemu, hlt_loop, serial_print, serial_println};
+use kernel::{QemuExitCode, exit_qemu, hlt_loop, serial_print, serial_println};
 
 entry_point!(main);
 
-fn main(_boot_info: &'static BootInfo) -> ! {
+fn main(_boot_info: &mut BootInfo) -> ! {
     should_fail();
     serial_println!("[test did not panic]");
     exit_qemu(QemuExitCode::Failed);
