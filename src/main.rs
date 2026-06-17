@@ -20,11 +20,14 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use rust_os::allocator;
     use rust_os::memory::{self, BootInfoFrameAllocator};
+    rust_os::init();
 
     println!("Hello World{}", "!");
 
-    rust_os::init();
-
+    unsafe {
+        // rust_os::acpi::init(boot_info.physical_memory_offset, boot_info.physical_memory_offset as usize);
+    }
+    
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(physical_memory_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
