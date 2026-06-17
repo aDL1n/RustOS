@@ -25,34 +25,40 @@ impl BumpAllocator {
         self.heap_end = heap_start + heap_size;
         self.next = heap_start;
     }
-}
 
-unsafe impl GlobalAlloc for Locked<BumpAllocator> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut bump = self.lock();
-
-        let alloc_start = align_up(bump.next, layout.align() as u64);
+    pub unsafe fn bump_alloc(&mut self, layout: Layout) -> *mut u8 {
+        let alloc_start = align_up(self.next, layout.align() as u64);
         let alloc_end = match alloc_start.checked_add(layout.size() as u64) {
             Some(end) => end,
             None => return ptr::null_mut(),
         };
 
-        if alloc_end > bump.heap_end {
+        if alloc_end > self.heap_end {
             ptr::null_mut()
         } else {
-            bump.next = alloc_end;
-            bump.allocations += 1;
+            self.next = alloc_end;
+            self.allocations += 1;
 
             alloc_start as *mut u8
         }
     }
 
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        let mut bump = self.lock();
-
-        bump.allocations -= 1;
-        if bump.allocations == 0 {
-            bump.next = bump.heap_start;
+    pub unsafe fn bump_dealloc(&mut self) {
+        self.allocations -= 1;
+        if self.allocations == 0 {
+            self.next = self.heap_start;
         }
+    }
+}
+
+unsafe impl GlobalAlloc for Locked<BumpAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        unsafe { 
+            self.lock().bump_alloc(layout) 
+        }
+    }
+
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        unsafe { self.lock().bump_dealloc() };
     }
 }

@@ -12,7 +12,7 @@ use core::panic::PanicInfo;
 use rust_os::task::Task;
 use rust_os::task::executor::Executor;
 use rust_os::task::keyboard;
-use rust_os::{eprintln, hlt_loop, memory, println};
+use rust_os::println;
 use x86_64::VirtAddr;
 
 entry_point!(kernel_main);
@@ -67,6 +67,8 @@ async fn example_task() {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    use rust_os::{eprintln, hlt_loop};
+    
     eprintln!("{}", info);
     hlt_loop();
 }
