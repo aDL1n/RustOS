@@ -1,6 +1,6 @@
-use core::fmt;
 use crate::framebuffer::WRITER;
 use crate::serial::SERIAL1;
+use core::fmt;
 
 #[macro_export]
 macro_rules! print {

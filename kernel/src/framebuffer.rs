@@ -1,7 +1,7 @@
 use bootloader_api::info::{FrameBuffer, PixelFormat};
 use core::fmt;
 use lazy_static::lazy_static;
-use noto_sans_mono_bitmap::{FontWeight, RasterHeight, get_raster};
+use noto_sans_mono_bitmap::{get_raster, FontWeight, RasterHeight};
 use spin::Mutex;
 
 const FONT_HEIGHT: RasterHeight = RasterHeight::Size16;

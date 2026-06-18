@@ -1,6 +1,5 @@
 use crate::{apic, eprintln, gdt, hlt_loop};
 use lazy_static::lazy_static;
-use spin;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 lazy_static! {
@@ -24,10 +23,6 @@ lazy_static! {
     };
 }
 
-pub fn init() {
-    IDT.load();
-}
-
 pub fn init_idt() {
     IDT.load();
 }
@@ -47,11 +42,7 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    unsafe {
-        if let Some(ref mut local_apic_wrapper) = *apic::LOCAL_APIC.lock() {
-            local_apic_wrapper.0.end_of_interrupt();
-        }
-    }
+    apic::end_of_interrupt();
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
@@ -61,11 +52,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
     let scancode: u8 = unsafe { port.read() };
     crate::task::keyboard::add_scancode(scancode);
 
-    unsafe {
-        if let Some(ref mut lapic) = *apic::LOCAL_APIC.lock() {
-            lapic.0.end_of_interrupt();
-        }
-    }
+    apic::end_of_interrupt();
 }
 
 extern "x86-interrupt" fn error_interrupt_handler(_stack_frame: InterruptStackFrame) {

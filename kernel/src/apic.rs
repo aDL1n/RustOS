@@ -68,7 +68,7 @@ fn init_local_apic(phys_offset: u64, apic_info: Option<&Apic>) {
         .spurious_vector(SPURIOUS_VECTOR as usize)
         .timer_mode(TimerMode::Periodic)
         .timer_divide(TimerDivide::Div16)
-        .timer_initial(10_000_000)
+        .timer_initial(0)
         .build()
         .expect("failed to build LocalApic");
 

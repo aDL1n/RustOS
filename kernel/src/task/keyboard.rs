@@ -5,7 +5,7 @@ use core::task::{Context, Poll};
 use crossbeam_queue::ArrayQueue;
 use futures_util::task::AtomicWaker;
 use futures_util::{Stream, StreamExt};
-use pc_keyboard::{DecodedKey, HandleControl, ScancodeSet1, layouts, PS2Keyboard};
+use pc_keyboard::{layouts, DecodedKey, HandleControl, PS2Keyboard, ScancodeSet1};
 
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static WAKER: AtomicWaker = AtomicWaker::new();

@@ -1,10 +1,10 @@
 extern crate alloc;
 
-use core::ptr::{read_volatile, write_volatile, NonNull};
-use acpi::{AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
 use acpi::aml::AmlError;
 use acpi::platform::AcpiPlatform;
 use acpi::sdt::madt::Madt;
+use acpi::{AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
+use core::ptr::{read_volatile, write_volatile, NonNull};
 use spin::Once;
 
 static ACPI_PLATFORM: Once<AcpiPlatform<BootloaderAcpiHandler>> = Once::new();
@@ -185,9 +185,14 @@ pub unsafe fn init(physical_memory_offset: u64, rsdp_addr: usize) {
 
         let apic_platform = AcpiPlatform::new(tables, BootloaderAcpiHandler)
             .expect("Failed to parse ACPI platform");
-        
+
         apic_platform
     });
+
+    unsafe {
+        x86_64::instructions::port::Port::<u8>::new(0xa1).write(0xFF);
+        x86_64::instructions::port::Port::<u8>::new(0x21).write(0xFF);
+    }
 }
 
 pub fn tables() -> &'static AcpiTables<BootloaderAcpiHandler> {

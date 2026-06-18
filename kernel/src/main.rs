@@ -5,14 +5,12 @@ extern crate alloc;
 
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use bootloader_api::config::Mapping;
-use bootloader_api::info::Optional;
-use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
+use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
-use kernel::task::Task;
 use kernel::task::executor::Executor;
 use kernel::task::keyboard;
-use kernel::{hlt_loop, println, serial_eprintln, serial_println};
-use x86_64::VirtAddr;
+use kernel::task::Task;
+use kernel::{hlt_loop, println};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();

@@ -22,7 +22,6 @@ pub mod apic;
 
 pub fn init(boot_info: &'static mut BootInfo) {
     gdt::init();
-    interrupts::init_idt();
 
     let physical_memory_offset = match boot_info.physical_memory_offset {
         Optional::Some(address) => address,
@@ -41,13 +40,14 @@ pub fn init(boot_info: &'static mut BootInfo) {
 
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
+
+
     unsafe {
         acpi::init(physical_memory_offset, rsdp_addr);
     }
 
     apic::init(physical_memory_offset);
-
-    interrupts::init();
+    interrupts::init_idt();
 
     x86_64::instructions::interrupts::enable();
 

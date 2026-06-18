@@ -4,10 +4,10 @@ mod linked_list;
 
 use spin::{MutexGuard, Spin};
 use x86_64::{
-    VirtAddr,
     structures::paging::{
-        FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB, mapper::MapToError,
+        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
     },
+    VirtAddr,
 };
 
 use crate::allocator::fixed_size_block::FixedSizeBlockAllocator;
