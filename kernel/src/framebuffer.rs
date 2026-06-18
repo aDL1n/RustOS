@@ -5,7 +5,7 @@ use noto_sans_mono_bitmap::{FontWeight, RasterHeight, get_raster};
 use spin::Mutex;
 
 const FONT_HEIGHT: RasterHeight = RasterHeight::Size16;
-const FONT_WEIGHT: FontWeight = FontWeight::Regular;
+const FONT_WEIGHT: FontWeight = FontWeight::Light;
 
 const CHAR_HEIGHT: usize = 16;
 

@@ -17,6 +17,7 @@ use x86_64::VirtAddr;
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
     config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config.kernel_stack_size = 100 * 1024;
     config
 };
 
