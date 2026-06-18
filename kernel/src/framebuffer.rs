@@ -13,7 +13,7 @@ pub struct FrameBufferWriter {
     framebuffer: &'static mut FrameBuffer,
     x_pos: usize,
     y_pos: usize,
-    color: [u8; 3],
+    pub(crate) color: [u8; 3],
     width: usize,
     height: usize,
     stride: usize,
@@ -161,55 +161,4 @@ pub fn init_framebuffer(framebuffer: &'static mut FrameBuffer) {
     writer.clear();
 
     *WRITER.lock() = Some(writer);
-}
-
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => ($crate::framebuffer::_print(format_args!($($arg)*)));
-}
-
-#[macro_export]
-macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
-}
-
-#[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
-    use x86_64::instructions::interrupts;
-
-    interrupts::without_interrupts(|| {
-        if let Some(writer) = WRITER.lock().as_mut() {
-            use core::fmt::Write;
-            let _ = writer.write_fmt(args);
-        }
-    });
-}
-
-#[macro_export]
-macro_rules! eprint {
-    ($($arg:tt)*) => ($crate::framebuffer::_eprint(format_args!($($arg)*)));
-}
-
-#[macro_export]
-macro_rules! eprintln {
-    () => {$crate::eprint!("\n")};
-    ($($arg:tt)*) => ($crate::eprint!("{}\n", format_args!($($arg)*)));
-}
-
-#[doc(hidden)]
-pub fn _eprint(args: fmt::Arguments) {
-    use core::fmt::Write;
-    use x86_64::instructions::interrupts;
-
-    interrupts::without_interrupts(|| {
-        if let Some(writer) = WRITER.lock().as_mut() {
-            let old_color = writer.color;
-            writer.set_color(255, 0, 0);
-
-            let _ = writer.write_fmt(args);
-
-            writer.color = old_color;
-        }
-    });
 }

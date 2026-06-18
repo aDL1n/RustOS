@@ -11,7 +11,7 @@ use core::panic::PanicInfo;
 use kernel::task::Task;
 use kernel::task::executor::Executor;
 use kernel::task::keyboard;
-use kernel::{println, serial_println};
+use kernel::{hlt_loop, println, serial_eprintln, serial_println};
 use x86_64::VirtAddr;
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
@@ -45,6 +45,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let mut executor = Executor::new();
     executor.spawn(Task::new(example_task()));
     executor.spawn(Task::new(keyboard::print_keypresses()));
+
+    println!("all works good!");
+
     executor.run();
 }
 
@@ -62,5 +65,5 @@ fn panic(info: &PanicInfo) -> ! {
     use kernel::{eprintln, hlt_loop};
 
     eprintln!("{}", info);
-    hlt_loop();
+    hlt_loop()
 }

@@ -1,10 +1,16 @@
 extern crate alloc;
 use acpi::madt::{Madt, MadtEntryIter};
-use acpi::{hpet::HpetTable, AcpiHandler, AcpiTables, PciConfigRegions, PhysicalMapping, PlatformInfo};
+use acpi::{
+    AcpiHandler, AcpiTables, PciConfigRegions, PhysicalMapping, PlatformInfo, hpet::HpetTable,
+};
 use core::ptr::NonNull;
 use spin::Once;
 
-static ACPI_TABLES: Once<AcpiTables<BootloaderAcpiHandler>> = Once::new();
+pub struct SafeAcpiTables(pub AcpiTables<BootloaderAcpiHandler>);
+
+unsafe impl Sync for SafeAcpiTables {}
+
+static ACPI_TABLES: Once<SafeAcpiTables> = Once::new();
 static PHYS_OFFSET: Once<u64> = Once::new();
 
 #[derive(Clone, Copy)]
@@ -37,17 +43,20 @@ pub unsafe fn init(physical_memory_offset: u64, rsdp_addr: usize) {
     PHYS_OFFSET.call_once(|| physical_memory_offset);
 
     ACPI_TABLES.call_once(|| unsafe {
-        AcpiTables::from_rsdp(BootloaderAcpiHandler, rsdp_addr)
-            .expect("Failed to parse ACPI tables")
+        let tables = AcpiTables::from_rsdp(BootloaderAcpiHandler, rsdp_addr)
+            .expect("Failed to parse ACPI tables");
+        SafeAcpiTables(tables)
     });
 }
 
 fn tables() -> &'static AcpiTables<BootloaderAcpiHandler> {
-    ACPI_TABLES.get().expect("ACPI_TABLES not initialized")
+    &ACPI_TABLES.get().expect("ACPI_TABLES not initialized").0
 }
 
 pub fn platform_info() -> PlatformInfo<'static, alloc::alloc::Global> {
-    tables().platform_info().expect("Failed to get platform info")
+    tables()
+        .platform_info()
+        .expect("Failed to get platform info")
 }
 
 pub fn hpet() -> Option<PhysicalMapping<BootloaderAcpiHandler, HpetTable>> {

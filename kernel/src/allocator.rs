@@ -2,6 +2,7 @@ mod bump;
 mod fixed_size_block;
 mod linked_list;
 
+use spin::{MutexGuard, Spin};
 use x86_64::{
     VirtAddr,
     structures::paging::{
@@ -54,7 +55,7 @@ impl<A> Locked<A> {
         }
     }
 
-    pub fn lock(&self) -> spin::MutexGuard<'_, A> {
+    pub fn lock(&self) -> MutexGuard<'_, A, Spin> {
         self.inner.lock()
     }
 }

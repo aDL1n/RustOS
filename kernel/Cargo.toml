@@ -9,18 +9,16 @@ test = false
 bench = false
 
 [dependencies]
-bootloader_api = "0.11.12"
-volatile = "0.3"
-spin = "0.10.0"
+bootloader_api = "0.11"
+spin = "0.12.0"
 x86_64 = "0.15.4"
-uart_16550 = "0.4.0"
+uart_16550 = "0.6.0"
 pic8259 = "0.11.0"
-pc-keyboard = "0.8.0"
+pc-keyboard = "0.9.0"
 acpi = "5"
-apic = "0.1.0"
 
 [dependencies.noto-sans-mono-bitmap]
-version = "0.2.0"
+version = "0.3.2"
 default-features = false
 features = [
     "regular",
@@ -30,7 +28,7 @@ features = [
 ]
 
 [dependencies.crossbeam-queue]
-version = "0.3.11"
+version = "0.3"
 default-features = false
 features = ["alloc"]
 

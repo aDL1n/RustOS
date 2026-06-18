@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
+
 extern crate alloc;
 
 use crate::memory::BootInfoFrameAllocator;
@@ -16,6 +17,7 @@ pub mod serial;
 pub mod task;
 pub mod framebuffer;
 pub mod acpi;
+pub mod print;
 
 pub fn init(boot_info: &'static mut BootInfo) {
     gdt::init();
