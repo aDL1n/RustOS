@@ -18,12 +18,11 @@ pub mod task;
 pub mod framebuffer;
 pub mod acpi;
 pub mod print;
+pub mod apic;
 
 pub fn init(boot_info: &'static mut BootInfo) {
     gdt::init();
     interrupts::init_idt();
-    unsafe { interrupts::PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
 
     let physical_memory_offset = match boot_info.physical_memory_offset {
         Optional::Some(address) => address,
@@ -34,7 +33,7 @@ pub fn init(boot_info: &'static mut BootInfo) {
         Optional::Some(address) => address as usize,
         Optional::None => panic!("rsdp_addr not find!"),
     };
-    
+
     let mut mapper = unsafe { memory::init(VirtAddr::new(physical_memory_offset)) };
 
     let memory_regions = &boot_info.memory_regions;
@@ -42,14 +41,19 @@ pub fn init(boot_info: &'static mut BootInfo) {
 
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
-    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        framebuffer::init_framebuffer(framebuffer);
-    }
-    
     unsafe {
         acpi::init(physical_memory_offset, rsdp_addr);
     }
-    
+
+    apic::init(physical_memory_offset);
+
+    interrupts::init();
+
+    x86_64::instructions::interrupts::enable();
+
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        framebuffer::init_framebuffer(framebuffer);
+    }
 }
 
 pub fn hlt_loop() -> ! {

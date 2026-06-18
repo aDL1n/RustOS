@@ -1,16 +1,13 @@
 extern crate alloc;
+
 use core::ptr::{read_volatile, write_volatile, NonNull};
 use acpi::{AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
 use acpi::aml::AmlError;
+use acpi::platform::AcpiPlatform;
 use acpi::sdt::madt::Madt;
-use acpi::sdt::Signature;
 use spin::Once;
 
-pub struct SafeAcpiTables(pub AcpiTables<BootloaderAcpiHandler>);
-
-unsafe impl Sync for SafeAcpiTables {}
-
-static ACPI_TABLES: Once<SafeAcpiTables> = Once::new();
+static ACPI_PLATFORM: Once<AcpiPlatform<BootloaderAcpiHandler>> = Once::new();
 static PHYS_OFFSET: Once<u64> = Once::new();
 
 #[derive(Clone, Copy)]
@@ -182,15 +179,19 @@ impl Handler for BootloaderAcpiHandler {
 pub unsafe fn init(physical_memory_offset: u64, rsdp_addr: usize) {
     PHYS_OFFSET.call_once(|| physical_memory_offset);
 
-    ACPI_TABLES.call_once(|| unsafe {
+    ACPI_PLATFORM.call_once(|| unsafe {
         let tables = AcpiTables::from_rsdp(BootloaderAcpiHandler, rsdp_addr)
             .expect("Failed to parse ACPI tables");
-        SafeAcpiTables(tables)
+
+        let apic_platform = AcpiPlatform::new(tables, BootloaderAcpiHandler)
+            .expect("Failed to parse ACPI platform");
+        
+        apic_platform
     });
 }
 
 pub fn tables() -> &'static AcpiTables<BootloaderAcpiHandler> {
-    &ACPI_TABLES.get().expect("ACPI_TABLES not initialized").0
+    &ACPI_PLATFORM.get().expect("ACPI_TABLES not initialized").tables
 }
 
 pub fn pci_config_regions() -> acpi::platform::pci::PciConfigRegions {
@@ -205,6 +206,10 @@ fn pci_config_address(address: PciAddress, offset: u16) -> u32 {
         | ((address.function() as u32) << 8)
         | ((offset as u32) & 0xFC)
         | 0x8000_0000
+}
+
+pub fn platform() -> &'static AcpiPlatform<BootloaderAcpiHandler> {
+    ACPI_PLATFORM.get().expect("platform_info not initialized")
 }
 
 pub fn madt() -> PhysicalMapping<BootloaderAcpiHandler, Madt>{
