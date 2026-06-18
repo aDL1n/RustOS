@@ -4,7 +4,7 @@ use core::fmt;
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::print::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::macros::_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -15,7 +15,7 @@ macro_rules! println {
 
 #[macro_export]
 macro_rules! eprint {
-    ($($arg:tt)*) => ($crate::print::_eprint(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::macros::_eprint(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -28,7 +28,7 @@ macro_rules! eprintln {
 #[macro_export]
 macro_rules! serial_print {
     ($($arg:tt)*) => {
-        $crate::print::_serial_print(format_args!($($arg)*));
+        $crate::macros::_serial_print(format_args!($($arg)*));
     };
 }
 
@@ -43,7 +43,7 @@ macro_rules! serial_println {
 #[macro_export]
 macro_rules! serial_eprint {
     ($($arg:tt)*) => {
-        $crate::print::_serial_eprint(format_args!($($arg)*));
+        $crate::macros::_serial_eprint(format_args!($($arg)*));
     };
 }
 
@@ -104,13 +104,12 @@ pub fn _eprint(args: fmt::Arguments) {
 
     interrupts::without_interrupts(|| {
         if let Some(writer) = WRITER.lock().as_mut() {
-            let old_color = writer.color;
-            writer.set_color(255, 0, 0);
+            let old_color = writer.get_color();
+            writer.set_color([255, 0, 0]);
 
             let _ = writer.write_fmt(args);
 
-            writer.color = old_color;
+            writer.set_color(old_color);
         }
     });
 }
-

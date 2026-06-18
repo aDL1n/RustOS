@@ -3,8 +3,9 @@ extern crate alloc;
 use acpi::aml::AmlError;
 use acpi::platform::AcpiPlatform;
 use acpi::sdt::madt::Madt;
-use acpi::{AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
+use acpi::{AcpiTable, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
 use core::ptr::{read_volatile, write_volatile, NonNull};
+use acpi::sdt::fadt::Fadt;
 use spin::Once;
 
 static ACPI_PLATFORM: Once<AcpiPlatform<BootloaderAcpiHandler>> = Once::new();
@@ -218,5 +219,13 @@ pub fn platform() -> &'static AcpiPlatform<BootloaderAcpiHandler> {
 }
 
 pub fn madt() -> PhysicalMapping<BootloaderAcpiHandler, Madt>{
-    tables().find_table::<Madt>().unwrap()
+    find_table::<Madt>()
+}
+
+pub fn fadt() -> PhysicalMapping<BootloaderAcpiHandler, Fadt>{
+    find_table::<Fadt>()
+}
+
+fn find_table<T>() -> PhysicalMapping<BootloaderAcpiHandler, T> where T: AcpiTable {
+    tables().find_table::<T>().unwrap()
 }

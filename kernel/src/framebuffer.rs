@@ -1,5 +1,6 @@
 use bootloader_api::info::{FrameBuffer, PixelFormat};
 use core::fmt;
+use core::ops::Deref;
 use lazy_static::lazy_static;
 use noto_sans_mono_bitmap::{get_raster, FontWeight, RasterHeight};
 use spin::Mutex;
@@ -9,11 +10,16 @@ const FONT_WEIGHT: FontWeight = FontWeight::Light;
 
 const CHAR_HEIGHT: usize = 16;
 
+#[derive(Default)]
+struct Position {
+    x: usize,
+    y: usize,
+}
+
 pub struct FrameBufferWriter {
     framebuffer: &'static mut FrameBuffer,
-    x_pos: usize,
-    y_pos: usize,
-    pub(crate) color: [u8; 3],
+    cursor_position: Position,
+    color: [u8; 3],
     width: usize,
     height: usize,
     stride: usize,
@@ -27,8 +33,7 @@ impl FrameBufferWriter {
 
         Self {
             framebuffer,
-            x_pos: 0,
-            y_pos: 0,
+            cursor_position: Position::default(),
             color: [255, 255, 255],
             width: info.width,
             height: info.height,
@@ -41,19 +46,22 @@ impl FrameBufferWriter {
     pub fn clear(&mut self) {
         self.framebuffer.buffer_mut().fill(0);
 
-        self.x_pos = 0;
-        self.y_pos = 0;
+        self.cursor_position = Position::default();
     }
 
-    pub fn set_color(&mut self, r: u8, g: u8, b: u8) {
-        self.color = [r, g, b];
+    pub fn set_color(&mut self, color: [u8; 3]) {
+        self.color = color;
+    }
+
+    pub fn get_color(&mut self) -> [u8; 3] {
+        self.color
     }
 
     fn newline(&mut self) {
-        self.x_pos = 0;
-        self.y_pos += CHAR_HEIGHT;
+        self.cursor_position.x = 0;
+        self.cursor_position.y += CHAR_HEIGHT;
 
-        if self.y_pos + CHAR_HEIGHT >= self.height {
+        if self.cursor_position.y + CHAR_HEIGHT >= self.height {
             self.scroll();
         }
     }
@@ -68,7 +76,7 @@ impl FrameBufferWriter {
         let len = buffer.len();
         buffer[len - scroll_bytes..].fill(0);
 
-        self.y_pos -= CHAR_HEIGHT;
+        self.cursor_position.y -= CHAR_HEIGHT;
     }
 
     fn write_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8) {
@@ -97,17 +105,17 @@ impl FrameBufferWriter {
         }
     }
 
-    fn draw_char(&mut self, c: char) {
-        let glyph = get_raster(c, FONT_WEIGHT, FONT_HEIGHT)
+    fn draw_char(&mut self, char: char) {
+        let rasterized_char = get_raster(char, FONT_WEIGHT, FONT_HEIGHT)
             .or_else(|| get_raster('?', FONT_WEIGHT, FONT_HEIGHT))
             .unwrap();
 
-        for (row, pixels) in glyph.raster().iter().enumerate() {
-            for (col, intensity) in pixels.iter().enumerate() {
+        for (row, pixels) in rasterized_char.raster().iter().enumerate() {
+            for (column, intensity) in pixels.iter().enumerate() {
                 if *intensity > 0 {
                     self.write_pixel(
-                        self.x_pos + col,
-                        self.y_pos + row,
+                        self.cursor_position.x + column,
+                        self.cursor_position.y + row,
                         self.color[0],
                         self.color[1],
                         self.color[2],
@@ -116,9 +124,9 @@ impl FrameBufferWriter {
             }
         }
 
-        self.x_pos += glyph.width();
+        self.cursor_position.x += rasterized_char.width();
 
-        if self.x_pos + glyph.width() >= self.width {
+        if self.cursor_position.x + rasterized_char.width() >= self.width {
             self.newline();
         }
     }
@@ -137,16 +145,16 @@ impl FrameBufferWriter {
         }
     }
 
-    pub fn write_string(&mut self, s: &str) {
-        for byte in s.bytes() {
+    pub fn write_string(&mut self, str: &str) {
+        for byte in str.bytes() {
             self.write_byte(byte);
         }
     }
 }
 
 impl fmt::Write for FrameBufferWriter {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_string(s);
+    fn write_str(&mut self, str: &str) -> fmt::Result {
+        self.write_string(str);
         Ok(())
     }
 }

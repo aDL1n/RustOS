@@ -3,19 +3,19 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
+use alloc::string::String;
+use alloc::{boxed::Box, format, rc::Rc, vec::Vec};
 use bootloader_api::config::Mapping;
-use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
+use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use core::panic::PanicInfo;
+use kernel::task::Task;
 use kernel::task::executor::Executor;
 use kernel::task::keyboard;
-use kernel::task::Task;
 use kernel::{hlt_loop, println};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
     config.mappings.physical_memory = Some(Mapping::Dynamic);
-    // config.kernel_stack_size = 200 * 1024;
     config
 };
 

@@ -17,7 +17,7 @@ pub mod serial;
 pub mod task;
 pub mod framebuffer;
 pub mod acpi;
-pub mod print;
+pub mod macros;
 pub mod apic;
 
 pub fn init(boot_info: &'static mut BootInfo) {
@@ -39,8 +39,6 @@ pub fn init(boot_info: &'static mut BootInfo) {
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(memory_regions) };
 
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
-
-
 
     unsafe {
         acpi::init(physical_memory_offset, rsdp_addr);

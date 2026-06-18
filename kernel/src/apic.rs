@@ -27,14 +27,14 @@ pub fn init(phys_offset: u64) {
 
 pub fn end_of_interrupt() {
     unsafe {
-        if let Some(ref mut lapic) = *LOCAL_APIC.lock() {
-            lapic.0.end_of_interrupt();
+        if let Some(ref mut local_apic) = *LOCAL_APIC.lock() {
+            local_apic.0.end_of_interrupt();
         }
     }
 }
 
 fn init_io_apic(phys_offset: u64, apic_info: Option<&Apic>) {
-    let ioapic_phys_addr = apic_info
+    let io_apic_phys_addr = apic_info
         .unwrap()
         .io_apics
         .first()
@@ -42,8 +42,8 @@ fn init_io_apic(phys_offset: u64, apic_info: Option<&Apic>) {
         .unwrap_or(0xFEC0_0000);
 
     unsafe {
-        let mut ioapic = IoApic::new(ioapic_phys_addr + phys_offset);
-        ioapic.init(TIMER_VECTOR);
+        let mut io_apic = IoApic::new(io_apic_phys_addr + phys_offset);
+        io_apic.init(TIMER_VECTOR);
 
         let mut entry = RedirectionTableEntry::default();
         entry.set_vector(KEYBOARD_VECTOR);
@@ -51,17 +51,17 @@ fn init_io_apic(phys_offset: u64, apic_info: Option<&Apic>) {
         entry.set_flags(IrqFlags::empty());
         entry.set_dest(0);
 
-        ioapic.set_table_entry(1, entry);
-        ioapic.enable_irq(1);
+        io_apic.set_table_entry(1, entry);
+        io_apic.enable_irq(1);
 
-        *IO_APIC.lock() = Some(ioapic);
+        *IO_APIC.lock() = Some(io_apic);
     }
 }
 
 fn init_local_apic(phys_offset: u64, apic_info: Option<&Apic>) {
     let local_apic_phys_adds = apic_info.unwrap().local_apic_address;
 
-    let lapic = LocalApicBuilder::new()
+    let local_apic = LocalApicBuilder::new()
         .set_xapic_base(local_apic_phys_adds + phys_offset)
         .timer_vector(TIMER_VECTOR as usize)
         .error_vector(ERROR_VECTOR as usize)
@@ -73,7 +73,7 @@ fn init_local_apic(phys_offset: u64, apic_info: Option<&Apic>) {
         .expect("failed to build LocalApic");
 
     unsafe {
-        let mut wrapper = LocalApicWrapper(lapic);
+        let mut wrapper = LocalApicWrapper(local_apic);
         wrapper.0.enable();
         wrapper.0.enable_timer();
         *LOCAL_APIC.lock() = Some(wrapper);
